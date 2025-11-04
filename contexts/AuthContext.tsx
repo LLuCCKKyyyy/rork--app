@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
 import createContextHook from '@nkzw/create-context-hook';
-import type { Employee, AuthCredentials } from '@/types';
+import type { Employee, AuthCredentials, RegisterCredentials } from '@/types';
 import { api } from '@/services/api';
 
 export const [AuthProvider, useAuth] = createContextHook(() => {
@@ -19,6 +19,14 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
   const loginMutation = useMutation({
     mutationFn: (credentials: AuthCredentials) => api.login(credentials),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['employee'], data.employee);
+      router.replace('/schedule');
+    },
+  });
+
+  const registerMutation = useMutation({
+    mutationFn: (credentials: RegisterCredentials) => api.register(credentials),
     onSuccess: (data) => {
       queryClient.setQueryData(['employee'], data.employee);
       router.replace('/schedule');
@@ -57,9 +65,12 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     isAuthenticated: !!employee,
     isLoading: isLoadingEmployee || !isInitialized,
     login: loginMutation.mutateAsync,
+    register: registerMutation.mutateAsync,
     logout: logoutMutation.mutateAsync,
     loginError: loginMutation.error as Error | null,
+    registerError: registerMutation.error as Error | null,
     isLoggingIn: loginMutation.isPending,
+    isRegistering: registerMutation.isPending,
     isLoggingOut: logoutMutation.isPending,
   };
 });

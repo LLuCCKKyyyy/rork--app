@@ -1,10 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { AuthCredentials, AuthResponse, Employee, Job, TimeEntry } from '@/types';
+import type { AuthCredentials, RegisterCredentials, AuthResponse, Employee, Job, TimeEntry } from '@/types';
 
 const STORAGE_KEYS = {
   AUTH_TOKEN: 'auth_token',
   EMPLOYEE: 'employee',
   TIME_ENTRIES: 'time_entries',
+  USERS: 'registered_users',
 };
 
 const mockEmployee: Employee = {
@@ -13,6 +14,16 @@ const mockEmployee: Employee = {
   email: 'zhangwei@example.com',
   phone: '+86 138 0000 0000',
   role: '现场技术员',
+  isAdmin: false,
+};
+
+const adminUser: Employee = {
+  id: 'admin-001',
+  name: '管理员',
+  email: 'admin@example.com',
+  phone: '+86 138 0000 0001',
+  role: '系统管理员',
+  isAdmin: true,
 };
 
 const mockJobs: Job[] = [
@@ -84,7 +95,73 @@ export const api = {
       };
     }
 
+    if (credentials.email === 'admin@example.com' && credentials.password === 'admin123') {
+      const token = 'admin-token-' + Date.now();
+      await AsyncStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
+      await AsyncStorage.setItem(STORAGE_KEYS.EMPLOYEE, JSON.stringify(adminUser));
+
+      return {
+        employee: adminUser,
+        token,
+      };
+    }
+
+    const usersData = await AsyncStorage.getItem(STORAGE_KEYS.USERS);
+    const users: (Employee & { password: string })[] = usersData ? JSON.parse(usersData) : [];
+
+    const user = users.find((u) => u.email === credentials.email && u.password === credentials.password);
+
+    if (user) {
+      const { password, ...employee } = user;
+      const token = 'token-' + Date.now();
+      await AsyncStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
+      await AsyncStorage.setItem(STORAGE_KEYS.EMPLOYEE, JSON.stringify(employee));
+
+      return {
+        employee,
+        token,
+      };
+    }
+
     throw new Error('用户名或密码错误');
+  },
+
+  async register(credentials: RegisterCredentials): Promise<AuthResponse> {
+    await new Promise((resolve) => setTimeout(resolve, 800));
+
+    const usersData = await AsyncStorage.getItem(STORAGE_KEYS.USERS);
+    const users: (Employee & { password: string })[] = usersData ? JSON.parse(usersData) : [];
+
+    if (users.find((u) => u.email === credentials.email)) {
+      throw new Error('该邮箱已被注册');
+    }
+
+    if (credentials.email === 'demo@example.com' || credentials.email === 'admin@example.com') {
+      throw new Error('该邮箱不可用');
+    }
+
+    const newEmployee: Employee & { password: string } = {
+      id: 'emp-' + Date.now(),
+      name: credentials.name,
+      email: credentials.email,
+      phone: credentials.phone,
+      role: credentials.role,
+      isAdmin: false,
+      password: credentials.password,
+    };
+
+    users.push(newEmployee);
+    await AsyncStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+
+    const { password, ...employee } = newEmployee;
+    const token = 'token-' + Date.now();
+    await AsyncStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
+    await AsyncStorage.setItem(STORAGE_KEYS.EMPLOYEE, JSON.stringify(employee));
+
+    return {
+      employee,
+      token,
+    };
   },
 
   async logout(): Promise<void> {

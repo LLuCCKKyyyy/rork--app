@@ -4,6 +4,7 @@ export interface Employee {
   email: string;
   phone: string;
   role: string;
+  isAdmin: boolean;
 }
 
 export interface Job {
@@ -32,6 +33,14 @@ export interface TimeEntry {
 export interface AuthCredentials {
   email: string;
   password: string;
+}
+
+export interface RegisterCredentials {
+  name: string;
+  email: string;
+  password: string;
+  phone: string;
+  role: string;
 }
 
 export interface AuthResponse {

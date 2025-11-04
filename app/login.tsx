@@ -17,9 +17,13 @@ import colors from '@/constants/colors';
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login, isLoggingIn, loginError } = useAuth();
+  const [phone, setPhone] = useState('');
+  const [role, setRole] = useState('');
+  const { login, register, isLoggingIn, isRegistering, loginError, registerError } = useAuth();
 
   const handleLogin = async () => {
     if (!email || !password) return;
@@ -29,6 +33,25 @@ export default function LoginScreen() {
     } catch (error) {
       console.error('Login error:', error);
     }
+  };
+
+  const handleRegister = async () => {
+    if (!name || !email || !password || !phone || !role) return;
+
+    try {
+      await register({ name, email, password, phone, role });
+    } catch (error) {
+      console.error('Register error:', error);
+    }
+  };
+
+  const toggleMode = () => {
+    setIsRegisterMode(!isRegisterMode);
+    setName('');
+    setEmail('');
+    setPassword('');
+    setPhone('');
+    setRole('');
   };
 
   return (
@@ -50,6 +73,21 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.form}>
+          {isRegisterMode && (
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>姓名</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="输入您的姓名"
+                placeholderTextColor={colors.textLight}
+                value={name}
+                onChangeText={setName}
+                autoCapitalize="words"
+                editable={!isRegistering}
+              />
+            </View>
+          )}
+
           <View style={styles.inputGroup}>
             <Text style={styles.label}>邮箱</Text>
             <TextInput
@@ -61,7 +99,7 @@ export default function LoginScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
-              editable={!isLoggingIn}
+              editable={!isLoggingIn && !isRegistering}
             />
           </View>
 
@@ -76,32 +114,87 @@ export default function LoginScreen() {
               secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}
-              editable={!isLoggingIn}
+              editable={!isLoggingIn && !isRegistering}
             />
           </View>
 
-          {loginError && (
+          {isRegisterMode && (
+            <>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>手机号码</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="输入您的手机号码"
+                  placeholderTextColor={colors.textLight}
+                  value={phone}
+                  onChangeText={setPhone}
+                  keyboardType="phone-pad"
+                  editable={!isRegistering}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>职位</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="输入您的职位 (如: 现场技术员)"
+                  placeholderTextColor={colors.textLight}
+                  value={role}
+                  onChangeText={setRole}
+                  autoCapitalize="words"
+                  editable={!isRegistering}
+                />
+              </View>
+            </>
+          )}
+
+          {(loginError || registerError) && (
             <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{loginError.message}</Text>
+              <Text style={styles.errorText}>
+                {isRegisterMode ? registerError?.message : loginError?.message}
+              </Text>
             </View>
           )}
 
           <TouchableOpacity
-            style={[styles.button, isLoggingIn && styles.buttonDisabled]}
-            onPress={handleLogin}
-            disabled={isLoggingIn || !email || !password}
+            style={[
+              styles.button,
+              (isLoggingIn || isRegistering) && styles.buttonDisabled,
+            ]}
+            onPress={isRegisterMode ? handleRegister : handleLogin}
+            disabled={
+              (isLoggingIn || isRegistering) ||
+              (isRegisterMode
+                ? !name || !email || !password || !phone || !role
+                : !email || !password)
+            }
           >
-            {isLoggingIn ? (
+            {isLoggingIn || isRegistering ? (
               <ActivityIndicator color={colors.surface} />
             ) : (
-              <Text style={styles.buttonText}>登录</Text>
+              <Text style={styles.buttonText}>
+                {isRegisterMode ? '注册' : '登录'}
+              </Text>
             )}
           </TouchableOpacity>
 
-          <View style={styles.demoInfo}>
-            <Text style={styles.demoText}>演示账号:</Text>
-            <Text style={styles.demoCredentials}>demo@example.com / demo123</Text>
-          </View>
+          <TouchableOpacity
+            style={styles.toggleButton}
+            onPress={toggleMode}
+            disabled={isLoggingIn || isRegistering}
+          >
+            <Text style={styles.toggleButtonText}>
+              {isRegisterMode ? '已有账号？点击登录' : '没有账号？点击注册'}
+            </Text>
+          </TouchableOpacity>
+
+          {!isRegisterMode && (
+            <View style={styles.demoInfo}>
+              <Text style={styles.demoText}>演示账号:</Text>
+              <Text style={styles.demoCredentials}>demo@example.com / demo123</Text>
+              <Text style={styles.demoCredentials}>admin@example.com / admin123 (管理员)</Text>
+            </View>
+          )}
         </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -198,6 +291,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700' as const,
   },
+  toggleButton: {
+    marginTop: 16,
+    padding: 12,
+    alignItems: 'center',
+  },
+  toggleButtonText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '600' as const,
+  },
   demoInfo: {
     marginTop: 32,
     padding: 16,
@@ -216,5 +319,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text,
     fontWeight: '500' as const,
+    marginBottom: 2,
   },
 });
