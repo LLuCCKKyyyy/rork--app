@@ -21,7 +21,11 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     mutationFn: (credentials: AuthCredentials) => api.login(credentials),
     onSuccess: (data) => {
       queryClient.setQueryData(['employee'], data.employee);
-      router.replace('/schedule');
+      if (data.employee.isAdmin) {
+        router.replace('/admin/dashboard');
+      } else {
+        router.replace('/schedule');
+      }
     },
   });
 
@@ -29,7 +33,11 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     mutationFn: (credentials: RegisterCredentials) => api.register(credentials),
     onSuccess: (data) => {
       queryClient.setQueryData(['employee'], data.employee);
-      router.replace('/schedule');
+      if (data.employee.isAdmin) {
+        router.replace('/admin/dashboard');
+      } else {
+        router.replace('/schedule');
+      }
     },
   });
 
@@ -52,11 +60,16 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     if (!isInitialized) return;
 
     const inAuthGroup = segments[0] === '(tabs)';
+    const inAdminGroup = segments[0] === 'admin';
 
-    if (!employee && inAuthGroup) {
+    if (!employee && (inAuthGroup || inAdminGroup)) {
       router.replace('/login');
-    } else if (employee && !inAuthGroup && segments[0] !== 'job') {
-      router.replace('/schedule');
+    } else if (employee && !inAuthGroup && !inAdminGroup && segments[0] !== 'job') {
+      if (employee.isAdmin) {
+        router.replace('/admin/dashboard');
+      } else {
+        router.replace('/schedule');
+      }
     }
   }, [employee, segments, isInitialized]);
 
